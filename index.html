@@ -3,10 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Polygon Castability Simulation</title>
-    <script src="./script.js" defer></script>
+    <title>Polygon Castability Visualization</title>
+    <style src="styles.css">
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <h1>Polygon Castability Visualization</h1>
+
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: #2196f3"></div>
+        <span>Polygon</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: #4caf50"></div>
+        <span>Top Facet</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: #f44336"></div>
+        <span>Rotation Center</span>
+      </div>
+      <div class="legend-item">
+        <div
+          class="legend-color"
+          style="background-color: rgba(255, 152, 0, 0.3)"
+        ></div>
+        <span>Rotation Path</span>
+      </div>
+    </div>
+
+    <div id="testContainer"></div>
+
+    <script src="script.js"></script>
   </body>
 </html>
