@@ -373,102 +373,76 @@ function isPolygonCastable(polygon) {
 // RANDOM POLYGON GENERATION
 // ==========================================
 
-// Random polygon generation functions
-function generateRandomPolygon(numVertices, minSize = 50, maxSize = 150) {
-  // Generate random convex polygon
-  if (Math.random() < 0.5) {
-    return generateRandomConvexPolygon(numVertices, minSize, maxSize);
-  } else {
-    return generateRandomNonConvexPolygon(numVertices, minSize, maxSize);
+/**
+ * Checks if a line segment intersects with another line segment
+ * @param {number[]} p1 First point of first segment
+ * @param {number[]} p2 Second point of first segment
+ * @param {number[]} p3 First point of second segment
+ * @param {number[]} p4 Second point of second segment
+ * @returns {boolean} True if the segments intersect
+ */
+function doSegmentsIntersect(p1, p2, p3, p4) {
+  // Calculate the direction vectors
+  const d1 = [p2[0] - p1[0], p2[1] - p1[1]];
+  const d2 = [p4[0] - p3[0], p4[1] - p3[1]];
+  const d3 = [p3[0] - p1[0], p3[1] - p1[1]];
+
+  // Calculate the cross products
+  const cross1 = d1[0] * d3[1] - d1[1] * d3[0]; // Cross product of d1 and d3
+  const cross2 = d1[0] * d2[1] - d1[1] * d2[0]; // Cross product of d1 and d2
+
+  if (Math.abs(cross2) < 1e-10) {
+    // Lines are parallel or collinear
+    return false;
   }
+
+  // Calculate the parameter t for the intersection point on the second line segment
+  const t1 = cross1 / cross2;
+
+  if (t1 < 0 || t1 > 1) {
+    // Intersection point is not on the second segment
+    return false;
+  }
+
+  // Calculate the parameter s for the intersection point on the first line segment
+  const cross3 = d3[0] * d2[1] - d3[1] * d2[0]; // Cross product of d3 and d2
+  const s = cross3 / cross2;
+
+  if (s < 0 || s > 1) {
+    // Intersection point is not on the first segment
+    return false;
+  }
+
+  return true;
 }
 
-function generateRandomConvexPolygon(numVertices, minSize = 50, maxSize = 150) {
-  // Generate random points
-  const angles = [];
-  for (let i = 0; i < numVertices; i++) {
-    angles.push(Math.random() * 2 * Math.PI);
+/**
+ * Checks if a polygon is simple (no self-intersections)
+ * @param {number[][]} polygon Array of vertices
+ * @returns {boolean} True if the polygon is simple
+ */
+function isSimplePolygon(polygon) {
+  const n = polygon.length;
+
+  // Check for intersections between non-adjacent edges
+  for (let i = 0; i < n; i++) {
+    const p1 = polygon[i];
+    const p2 = polygon[(i + 1) % n];
+
+    for (let j = i + 2; j < n; j++) {
+      // Skip adjacent edges (they share a vertex)
+      if (i === 0 && j === n - 1) continue;
+
+      const p3 = polygon[j];
+      const p4 = polygon[(j + 1) % n];
+
+      if (doSegmentsIntersect(p1, p2, p3, p4)) {
+        return false;
+      }
+    }
   }
 
-  // Sort angles to ensure convexity
-  angles.sort();
-
-  const centerX = 0;
-  const centerY = 0;
-  const radius = minSize + Math.random() * (maxSize - minSize);
-
-  // Create vertices using polar coordinates
-  const vertices = [];
-  for (let i = 0; i < numVertices; i++) {
-    const angle = angles[i];
-    // Add some randomness to the radius for more varied shapes
-    const r = radius * (0.5 + 0.5 * Math.random());
-    const x = centerX + r * Math.cos(angle);
-    const y = centerY + r * Math.sin(angle);
-    vertices.push([x, y]);
-  }
-
-  return vertices;
-}
-
-function generateRandomNonConvexPolygon(
-  numVertices,
-  minSize = 50,
-  maxSize = 150
-) {
-  // First generate a convex polygon
-  const convexPolygon = generateRandomConvexPolygon(
-    numVertices,
-    minSize,
-    maxSize
-  );
-
-  // Make it non-convex by pushing some vertices inward
-  const nonConvexPolygon = [...convexPolygon];
-
-  // Number of vertices to push inward (at least 1, at most half)
-  const numToModify = Math.max(
-    1,
-    Math.floor(Math.random() * (numVertices / 2))
-  );
-
-  // Randomly select vertices to modify
-  const indicesToModify = new Set();
-  while (indicesToModify.size < numToModify) {
-    indicesToModify.add(Math.floor(Math.random() * numVertices));
-  }
-
-  // Calculate centroid
-  let centroidX = 0,
-    centroidY = 0;
-  for (const vertex of convexPolygon) {
-    centroidX += vertex[0];
-    centroidY += vertex[1];
-  }
-  centroidX /= numVertices;
-  centroidY /= numVertices;
-
-  // Push selected vertices inward
-  for (const index of indicesToModify) {
-    const vertex = nonConvexPolygon[index];
-    const vectorToCentroid = [centroidX - vertex[0], centroidY - vertex[1]];
-    const magnitude = Math.sqrt(
-      vectorToCentroid[0] ** 2 + vectorToCentroid[1] ** 2
-    );
-    const normalizedVector = [
-      vectorToCentroid[0] / magnitude,
-      vectorToCentroid[1] / magnitude,
-    ];
-
-    // Move vertex 30-70% toward centroid
-    const moveFactor = 0.3 + Math.random() * 0.4;
-    nonConvexPolygon[index] = [
-      vertex[0] + normalizedVector[0] * magnitude * moveFactor,
-      vertex[1] + normalizedVector[1] * magnitude * moveFactor,
-    ];
-  }
-
-  return nonConvexPolygon;
+  return true;
 }
 
 // Function to generate a set of random test cases
@@ -600,34 +574,100 @@ function visualizePolygon(testCase, containerId = "testContainer") {
   // Clear canvas
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Calculate scale and offset to center the polygon
-  let minX = Infinity,
-    minY = Infinity,
-    maxX = -Infinity,
-    maxY = -Infinity;
-  for (const point of testCase.polygon) {
-    minX = Math.min(minX, point[0]);
-    minY = Math.min(minY, point[1]);
-    maxX = Math.max(maxX, point[0]);
-    maxY = Math.max(maxY, point[1]);
-  }
-
-  const polygonWidth = maxX - minX;
-  const polygonHeight = maxY - minY;
-  const scale = Math.min(
-    (canvas.width - 100) / polygonWidth,
-    (canvas.height - 100) / polygonHeight
-  );
-  const offsetX = (canvas.width - polygonWidth * scale) / 2 - minX * scale;
-  const offsetY = (canvas.height - polygonHeight * scale) / 2 - minY * scale;
-
-  // Scale the polygon to fit the canvas
-  const scaledPolygon = scalePolygon(testCase.polygon, scale, offsetX, offsetY);
-
-  // Get castability result
+  // Get castability result first to find the top facet
   let result;
   try {
     result = isPolygonCastable(testCase.polygon);
+
+    let scaledPolygon;
+    let scaledCenter = null;
+    let scaledTopFacet = null;
+    let rotatedPolygon = null; // Declare rotatedPolygon here
+
+    // Calculate scale and offset to center the polygon
+    let polygonToDisplay = [...testCase.polygon]; // Clone the polygon
+
+    // If castable, properly orient the polygon so the top facet is at the top
+    if (result.castable) {
+      // Step 1: Rotate the polygon so that top facet is horizontal
+      rotatedPolygon = rotateToEdge(testCase.polygon, result.topFacet);
+
+      // Step 2: Find the y-coordinate of the top facet
+      let topFacetY = null;
+      for (let i = 0; i < rotatedPolygon.length; i++) {
+        const v1 = rotatedPolygon[i];
+        const v2 = rotatedPolygon[(i + 1) % rotatedPolygon.length];
+
+        // Check if this edge corresponds to the rotated top facet
+        // (it should be a horizontal line)
+        if (Math.abs(v1[1] - v2[1]) < 1e-10) {
+          topFacetY = v1[1];
+          break;
+        }
+      }
+
+      if (topFacetY === null) {
+        console.error(
+          "Could not find the top facet y-coordinate in rotated polygon"
+        );
+        topFacetY = 0;
+      }
+
+      // Step 3: Find if any vertex is above the top facet
+      let anyVertexAbove = false;
+      let minY = topFacetY;
+
+      for (const vertex of rotatedPolygon) {
+        if (vertex[1] < topFacetY - 1e-10) {
+          // Vertex is above the top facet
+          anyVertexAbove = true;
+        }
+        minY = Math.min(minY, vertex[1]);
+      }
+
+      // Step 4: Ensure top facet is at the top, and no other vertices are above it
+      const offsetY = topFacetY - minY; // This moves the top facet to the highest point
+
+      // Adjust the polygon so top facet is at the top
+      polygonToDisplay = rotatedPolygon.map((vertex) => [
+        vertex[0],
+        // If any parts are above the top facet, we need to push the top facet higher
+        // by offsetting all vertices
+        anyVertexAbove ? vertex[1] - minY : vertex[1],
+      ]);
+
+      // Step 5: Invert the y-coordinates so top facet is at the top of the screen
+      // (Canvas y-coord increases downward)
+      polygonToDisplay = polygonToDisplay.map((vertex) => [
+        vertex[0],
+        -vertex[1],
+      ]);
+    }
+    // Else - If not castable, we leave the polygon as is (no rotation needed)
+
+    // Calculate bounds for the properly oriented polygon
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity;
+    for (const point of polygonToDisplay) {
+      minX = Math.min(minX, point[0]);
+      minY = Math.min(minY, point[1]);
+      maxX = Math.max(maxX, point[0]);
+      maxY = Math.max(maxY, point[1]);
+    }
+
+    const polygonWidth = maxX - minX;
+    const polygonHeight = maxY - minY;
+    const scale = Math.min(
+      (canvas.width - 100) / polygonWidth,
+      (canvas.height - 100) / polygonHeight
+    );
+    const offsetX = (canvas.width - polygonWidth * scale) / 2 - minX * scale;
+    const offsetY = (canvas.height - polygonHeight * scale) / 2 - minY * scale;
+
+    // Scale the polygon to fit the canvas
+    scaledPolygon = scalePolygon(polygonToDisplay, scale, offsetX, offsetY);
 
     // Draw the polygon
     drawPolygon(ctx, scaledPolygon);
@@ -636,13 +676,96 @@ function visualizePolygon(testCase, containerId = "testContainer") {
     const resultInfo = document.createElement("div");
     resultInfo.className = "result-info";
 
-    if (result.castable) {
+    if (result.castable && rotatedPolygon) {
+      // For the rotation center, we need to apply the same transformations
+      let center = result.center;
+
+      // Step 1: Apply rotation using the same method as for the polygon
+      const rotationMatrix = getRotationMatrix(result.topFacet);
+      let rotatedCenter = applyTransformation(center, rotationMatrix);
+
+      // Step 2: Apply the same y offset and inversion as the polygon
+      // Find the y-coordinate of top facet after all transformations
+      let topFacetY = null;
+      for (let i = 0; i < rotatedPolygon.length; i++) {
+        const v1 = rotatedPolygon[i];
+        const v2 = rotatedPolygon[(i + 1) % rotatedPolygon.length];
+
+        if (Math.abs(v1[1] - v2[1]) < 1e-10) {
+          topFacetY = v1[1];
+          break;
+        }
+      }
+
+      if (topFacetY !== null) {
+        // Find if any vertex is above the top facet
+        let anyVertexAbove = false;
+        let minY = topFacetY;
+
+        for (const vertex of rotatedPolygon) {
+          if (vertex[1] < topFacetY - 1e-10) {
+            anyVertexAbove = true;
+          }
+          minY = Math.min(minY, vertex[1]);
+        }
+
+        // Apply the same transformations to the center as to the polygon
+        if (anyVertexAbove) {
+          rotatedCenter = [rotatedCenter[0], rotatedCenter[1] - minY];
+        }
+      }
+
+      // Invert y-coordinate
+      rotatedCenter = [rotatedCenter[0], -rotatedCenter[1]];
+
+      // Scale and translate
+      scaledCenter = [
+        rotatedCenter[0] * scale + offsetX,
+        rotatedCenter[1] * scale + offsetY,
+      ];
+
+      // Find the top-most horizontal edge after all transformations
+      let topY = Infinity;
+      for (let i = 0; i < scaledPolygon.length; i++) {
+        const v1 = scaledPolygon[i];
+        const v2 = scaledPolygon[(i + 1) % scaledPolygon.length];
+
+        // If this is a horizontal edge (y coordinates are the same)
+        if (Math.abs(v1[1] - v2[1]) < 1e-10) {
+          if (v1[1] < topY) {
+            topY = v1[1];
+            scaledTopFacet = [v1, v2];
+          }
+        }
+      }
+
       resultInfo.innerHTML = `<span class="castable">✓ Castable</span> - Rotation center: (${result.center[0].toFixed(
         2
       )}, ${result.center[1].toFixed(2)})`;
 
-      // Scale the top facet
-      const scaledTopFacet = [
+      // Draw the top facet
+      if (scaledTopFacet) {
+        drawEdge(ctx, scaledTopFacet, "#4CAF50");
+      }
+
+      // Draw the rotation center
+      drawRotationCenter(ctx, scaledCenter);
+
+      // Draw rotation paths
+      drawRotationPath(ctx, scaledPolygon, scaledCenter);
+    } else if (result.castable) {
+      // Fallback if rotatedPolygon is not available but the shape is castable
+      resultInfo.innerHTML = `<span class="castable">✓ Castable</span> - Rotation center: (${result.center[0].toFixed(
+        2
+      )}, ${result.center[1].toFixed(2)})`;
+
+      // Just scale the original center and top facet directly
+      scaledCenter = [
+        result.center[0] * scale + offsetX,
+        result.center[1] * scale + offsetY,
+      ];
+
+      scaledTopFacet = [
         [
           result.topFacet[0][0] * scale + offsetX,
           result.topFacet[0][1] * scale + offsetY,
@@ -653,22 +776,15 @@ function visualizePolygon(testCase, containerId = "testContainer") {
         ],
       ];
 
-      // Draw the top facet
-      drawEdge(ctx, scaledTopFacet, "#4CAF50");
+      if (scaledTopFacet) {
+        drawEdge(ctx, scaledTopFacet, "#4CAF50");
+      }
 
-      // Scale the rotation center
-      const scaledCenter = [
-        result.center[0] * scale + offsetX,
-        result.center[1] * scale + offsetY,
-      ];
-
-      // Draw the rotation center
       drawRotationCenter(ctx, scaledCenter);
-
-      // Draw rotation paths
       drawRotationPath(ctx, scaledPolygon, scaledCenter);
     } else {
       resultInfo.innerHTML = `<span class="not-castable">✗ Not Castable</span> - ${result.message}`;
+      // For non-castable shapes, we don't draw the top facet or rotation center
     }
 
     containerDiv.appendChild(resultInfo);
@@ -692,6 +808,26 @@ function visualizePolygon(testCase, containerId = "testContainer") {
     errorInfo.textContent = `Error: ${error.message}`;
     containerDiv.appendChild(errorInfo);
   }
+}
+
+// Helper function to get rotation matrix from top facet
+function getRotationMatrix(topEdge) {
+  const edgeVector = vectorSubtract(topEdge[1], topEdge[0]);
+  const angle = -Math.atan2(edgeVector[1], edgeVector[0]);
+
+  return {
+    cos: Math.cos(angle),
+    sin: Math.sin(angle),
+    angle: angle,
+  };
+}
+
+// Apply rotation matrix to a point
+function applyTransformation(point, matrix) {
+  return [
+    point[0] * matrix.cos - point[1] * matrix.sin,
+    point[0] * matrix.sin + point[1] * matrix.cos,
+  ];
 }
 
 // ==========================================
@@ -802,3 +938,5 @@ window.generateRandomTestCases = generateRandomTestCases;
 window.visualizePolygon = visualizePolygon;
 window.isPolygonCastable = isPolygonCastable;
 window.getTopFacets = getTopFacets;
+window.getRotationMatrix = getRotationMatrix;
+window.applyTransformation = applyTransformation;
