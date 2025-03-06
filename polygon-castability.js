@@ -412,19 +412,35 @@ function drawRotationPath(
     // Calculate start angle
     const startAngle = Math.atan2(dy, dx);
 
-    // Draw arc (clockwise rotation)
+    // Draw complete circular arc (full 360 degrees)
     ctx.beginPath();
-    ctx.arc(
-      center[0],
-      center[1],
-      radius,
-      startAngle,
-      startAngle - Math.PI / 2,
-      true
-    );
+    ctx.arc(center[0], center[1], radius, 0, Math.PI * 2);
     ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1;
     ctx.stroke();
+
+    // Draw the initial vertex position
+    ctx.beginPath();
+    ctx.arc(vertex[0], vertex[1], 3, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+
+    // Draw multiple positions along the rotation path to illustrate movement
+    const numPoints = 12; // Number of points to display along the path
+    for (let i = 1; i <= numPoints; i++) {
+      const angle = startAngle - (Math.PI * 2 * i) / numPoints;
+      const x = center[0] + radius * Math.cos(angle);
+      const y = center[1] + radius * Math.sin(angle);
+
+      // Draw a small dot at each position
+      ctx.beginPath();
+      ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+      ctx.fillStyle =
+        i === numPoints / 4
+          ? "rgba(255, 100, 0, 0.7)"
+          : "rgba(255, 152, 0, 0.5)";
+      ctx.fill();
+    }
   }
 }
 
