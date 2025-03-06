@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Polygon Castability Visualization</title>
     <link rel="stylesheet" href="styles.css" />
+    <script src="polygon-castability.js"></script>
   </head>
   <body>
     <h1>Polygon Castability Visualization</h1>
@@ -28,8 +29,8 @@
       </div>
     </div>
 
-    <div id="controls" class="control-panel">
-      <button id="generateButton">Generate Random Polygons</button>
+    <div class="control-panel">
+      <button id="generateRandomButton">Generate Random Polygons</button>
     </div>
 
     <h2>Predefined Test Cases</h2>
@@ -38,6 +39,82 @@
     <h2>Random Test Cases</h2>
     <div id="randomTestContainer"></div>
 
-    <script src="polygon-castability.js"></script>
+    <script>
+      // Set up the button event handler directly in the HTML
+      document.addEventListener("DOMContentLoaded", function () {
+        console.log("Setting up button handler");
+        const generateButton = document.getElementById("generateRandomButton");
+        if (generateButton) {
+          generateButton.addEventListener("click", function () {
+            console.log("Button clicked!");
+
+            // Add a loading message immediately for visual feedback
+            const randomTestContainer = document.getElementById(
+              "randomTestContainer"
+            );
+            randomTestContainer.innerHTML =
+              '<div class="test-container"><h3>Generating random polygons...</h3></div>';
+
+            // Use setTimeout to ensure the UI updates before we start the heavy computation
+            setTimeout(function () {
+              try {
+                // Clear the loading message
+                randomTestContainer.innerHTML = "";
+
+                // Generate and visualize random test cases
+                const randomTests = generateRandomTestCases(5);
+                console.log("Generated random polygons:", randomTests);
+
+                // Make sure random polygons are in clockwise order
+                for (const test of randomTests) {
+                  test.polygon = ensureClockwise(test.polygon);
+                }
+
+                // Display random test case stats
+                const statsDiv = document.createElement("div");
+                statsDiv.className = "test-container";
+                statsDiv.innerHTML = "<h3>Random Test Statistics</h3>";
+                randomTestContainer.appendChild(statsDiv);
+
+                let castableCount = 0;
+                randomTests.forEach((test) => {
+                  try {
+                    const result = isPolygonCastable(test.polygon);
+                    if (result.castable) castableCount++;
+
+                    // Visualize each random polygon
+                    visualizePolygon(test, "randomTestContainer");
+                  } catch (error) {
+                    console.error(`Error testing ${test.name}:`, error);
+
+                    // Still display the polygon even if there was an error analyzing it
+                    const errorDiv = document.createElement("div");
+                    errorDiv.className = "test-container";
+                    errorDiv.innerHTML = `<h3>${test.name}</h3><div class="result-info not-castable">Error analyzing polygon: ${error.message}</div>`;
+                    randomTestContainer.appendChild(errorDiv);
+                  }
+                });
+
+                // Add statistics
+                const resultInfo = document.createElement("div");
+                resultInfo.className = "result-info";
+                resultInfo.innerHTML = `<strong>Results:</strong> ${castableCount} out of ${
+                  randomTests.length
+                } random polygons are castable (${(
+                  (castableCount / randomTests.length) *
+                  100
+                ).toFixed(0)}%).`;
+                statsDiv.appendChild(resultInfo);
+              } catch (error) {
+                console.error("Error in random polygon generation:", error);
+                randomTestContainer.innerHTML = `<div class="test-container not-castable">Error generating random polygons: ${error.message}</div>`;
+              }
+            }, 10); // Short timeout to allow UI to update
+          });
+        } else {
+          console.error("Button element not found!");
+        }
+      });
+    </script>
   </body>
 </html>
