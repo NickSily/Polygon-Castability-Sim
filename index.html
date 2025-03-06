@@ -4,36 +4,32 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Polygon Castability Visualization</title>
-    <style src="styles.css">
-    </style>
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <h1>Polygon Castability Visualization</h1>
 
     <div class="legend">
       <div class="legend-item">
-        <div class="legend-color" style="background-color: #2196f3"></div>
+        <div class="legend-color polygon-color"></div>
         <span>Polygon</span>
       </div>
       <div class="legend-item">
-        <div class="legend-color" style="background-color: #4caf50"></div>
+        <div class="legend-color facet-color"></div>
         <span>Top Facet</span>
       </div>
       <div class="legend-item">
-        <div class="legend-color" style="background-color: #f44336"></div>
+        <div class="legend-color center-color"></div>
         <span>Rotation Center</span>
       </div>
       <div class="legend-item">
-        <div
-          class="legend-color"
-          style="background-color: rgba(255, 152, 0, 0.3)"
-        ></div>
+        <div class="legend-color path-color"></div>
         <span>Rotation Path</span>
       </div>
     </div>
 
     <div id="testContainer"></div>
 
-    <script src="script.js"></script>
+    <script src="polygon-castability.js"></script>
   </body>
 </html>

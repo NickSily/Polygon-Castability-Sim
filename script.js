@@ -146,6 +146,24 @@ function getRotationConstraints(polygon, topFacet) {
     throw new Error("Top facet vertices not found in polygon");
   }
 
+  // Find the rightmost vertex in the polygon
+  let rightmostX = -Infinity;
+  let rightmostVertex = null;
+
+  for (const vertex of polygon) {
+    if (vertex[0] > rightmostX) {
+      rightmostX = vertex[0];
+      rightmostVertex = vertex;
+    }
+  }
+
+  // Add initial constraint: rotation center must be to the right of the rightmost vertex
+  constraints.push({
+    type: "right",
+    normal: [1, 0], // Points to the right
+    point: rightmostVertex, // The rightmost vertex
+  });
+
   // For each edge except the top facet
   for (let i = 0; i < n; i++) {
     if (
@@ -204,7 +222,8 @@ function solveLP(constraints) {
 
       if (
         (constraint.type === "below" && dotProduct < 0) ||
-        (constraint.type === "above" && dotProduct > 0)
+        (constraint.type === "above" && dotProduct > 0) ||
+        (constraint.type === "right" && dotProduct <= 0)
       ) {
         return false;
       }
@@ -596,4 +615,6 @@ const testCases = [
 ];
 
 // Visualize each test case
-testCases.forEach(visualizePolygon);
+window.addEventListener("DOMContentLoaded", () => {
+  testCases.forEach(visualizePolygon);
+});
