@@ -302,12 +302,75 @@ function isPolygonCastable(polygon) {
   return { castable: false, message: "Polygon is not castable by rotation" };
 }
 
-// Test with a sample polygon
-const testPolygon = [
-  [0, 0], [5, 0], [5, 3], [3, 5], [0, 3]
-];
+// Test cases
+function runTests() {
+  // Test Case 1: Simple convex pentagon (should be castable)
+  const convexPentagon = [
+    [0, 0], [5, 0], [5, 3], [3, 5], [0, 3]
+  ];
+  
+  // Test Case 2: Square (should be castable from any side)
+  const square = [
+    [0, 0], [5, 0], [5, 5], [0, 5]
+  ];
+  
+  // Test Case 3: Triangle (should be castable)
+  const triangle = [
+    [0, 0], [5, 0], [2, 4]
+  ];
+  
+  // Test Case 4: Non-convex polygon (L-shape, may not be castable from all sides)
+  const lShape = [
+    [0, 0], [3, 0], [3, 1], [1, 1], [1, 3], [0, 3]
+  ];
+  
+  // Test Case 5: Star-like shape (complex non-convex)
+  const star = [
+    [3, 0], [4, 2], [6, 2], [5, 3], [6, 5], [3, 4], [0, 5], [1, 3], [0, 2], [2, 2]
+  ];
+  
+  // Test Case 6: U-shape (highly non-convex, challenging for castability)
+  const uShape = [
+    [0, 0], [5, 0], [5, 5], [4, 5], [4, 1], [1, 1], [1, 5], [0, 5]
+  ];
+  
+  // Test Case 7: Arrow shape (non-convex)
+  const arrow = [
+    [0, 0], [2, 0], [3, 1], [4, 0], [6, 0], [3, 3]
+  ];
 
-console.log("Hello World");
-console.log("Testing polygon castability:");
-const result = isPolygonCastable(testPolygon);
-console.log(result);
+  const testCases = [
+    { name: "Convex Pentagon", polygon: convexPentagon },
+    { name: "Square", polygon: square },
+    { name: "Triangle", polygon: triangle },
+    { name: "L-Shape", polygon: lShape },
+    { name: "Star Shape", polygon: star },
+    { name: "U-Shape", polygon: uShape },
+    { name: "Arrow Shape", polygon: arrow }
+  ];
+
+  console.log("=== POLYGON CASTABILITY TEST RESULTS ===");
+  
+  for (const test of testCases) {
+    console.log(`\nTesting ${test.name}:`);
+    try {
+      const result = isPolygonCastable(test.polygon);
+      console.log(`- Castable: ${result.castable}`);
+      if (result.castable) {
+        console.log(`- Rotation Center: (${result.center[0].toFixed(2)}, ${result.center[1].toFixed(2)})`);
+        console.log(`- Top Facet: (${result.topFacet[0][0]}, ${result.topFacet[0][1]}) to (${result.topFacet[1][0]}, ${result.topFacet[1][1]})`);
+      } else {
+        console.log(`- Message: ${result.message}`);
+      }
+      
+      // Additional detail: How many potential top facets were found
+      const topFacets = getTopFacets(test.polygon);
+      console.log(`- Potential top facets found: ${topFacets.length}`);
+    } catch (error) {
+      console.error(`Error testing ${test.name}:`, error.message);
+    }
+  }
+}
+
+// Run the tests
+runTests();
