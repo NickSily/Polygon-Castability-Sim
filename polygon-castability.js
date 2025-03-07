@@ -1,4 +1,254 @@
 // ==========================================
+// RANDOM POLYGON GENERATION
+// ==========================================
+
+/**
+ * Checks if a line segment intersects with another line segment
+ * @param {number[]} p1 First point of first segment
+ * @param {number[]} p2 Second point of first segment
+ * @param {number[]} p3 First point of second segment
+ * @param {number[]} p4 Second point of second segment
+ * @returns {boolean} True if the segments intersect
+ */
+function doSegmentsIntersect(p1, p2, p3, p4) {
+  // Calculate the direction vectors
+  const d1 = [p2[0] - p1[0], p2[1] - p1[1]];
+  const d2 = [p4[0] - p3[0], p4[1] - p3[1]];
+  const d3 = [p3[0] - p1[0], p3[1] - p1[1]];
+
+  // Calculate the cross products
+  const cross1 = d1[0] * d3[1] - d1[1] * d3[0]; // Cross product of d1 and d3
+  const cross2 = d1[0] * d2[1] - d1[1] * d2[0]; // Cross product of d1 and d2
+
+  if (Math.abs(cross2) < 1e-10) {
+    // Lines are parallel or collinear
+    return false;
+  }
+
+  // Calculate the parameter t for the intersection point on the second line segment
+  const t1 = cross1 / cross2;
+
+  if (t1 < 0 || t1 > 1) {
+    // Intersection point is not on the second segment
+    return false;
+  }
+
+  // Calculate the parameter s for the intersection point on the first line segment
+  const cross3 = d3[0] * d2[1] - d3[1] * d2[0]; // Cross product of d3 and d2
+  const s = cross3 / cross2;
+
+  if (s < 0 || s > 1) {
+    // Intersection point is not on the first segment
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Checks if a polygon is simple (no self-intersections)
+ * @param {number[][]} polygon Array of vertices
+ * @returns {boolean} True if the polygon is simple
+ */
+function isSimplePolygon(polygon) {
+  const n = polygon.length;
+
+  // Check for intersections between non-adjacent edges
+  for (let i = 0; i < n; i++) {
+    const p1 = polygon[i];
+    const p2 = polygon[(i + 1) % n];
+
+    for (let j = i + 2; j < n; j++) {
+      // Skip adjacent edges (they share a vertex)
+      if (i === 0 && j === n - 1) continue;
+
+      const p3 = polygon[j];
+      const p4 = polygon[(j + 1) % n];
+
+      if (doSegmentsIntersect(p1, p2, p3, p4)) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Generate a random polygon
+ * @param {number} numVertices Number of vertices
+ * @param {number} minSize Minimum size
+ * @param {number} maxSize Maximum size
+ * @returns {number[][]} Array of vertices
+ */
+function generateRandomPolygon(numVertices, minSize = 50, maxSize = 150) {
+  // Generate random convex polygon
+  if (Math.random() < 0.5) {
+    return generateRandomConvexPolygon(numVertices, minSize, maxSize);
+  } else {
+    return generateRandomNonConvexPolygon(numVertices, minSize, maxSize);
+  }
+}
+
+/**
+ * Generate a random convex polygon
+ * @param {number} numVertices Number of vertices
+ * @param {number} minSize Minimum size
+ * @param {number} maxSize Maximum size
+ * @returns {number[][]} Array of vertices
+ */
+function generateRandomConvexPolygon(numVertices, minSize = 50, maxSize = 150) {
+  // Generate random points
+  const angles = [];
+  for (let i = 0; i < numVertices; i++) {
+    angles.push(Math.random() * 2 * Math.PI);
+  }
+
+  // Sort angles to ensure convexity
+  angles.sort();
+
+  const centerX = 0;
+  const centerY = 0;
+  const radius = minSize + Math.random() * (maxSize - minSize);
+
+  // Create vertices using polar coordinates
+  const vertices = [];
+  for (let i = 0; i < numVertices; i++) {
+    const angle = angles[i];
+    // Add some randomness to the radius for more varied shapes
+    const r = radius * (0.5 + 0.5 * Math.random());
+    const x = centerX + r * Math.cos(angle);
+    const y = centerY + r * Math.sin(angle);
+    vertices.push([x, y]);
+  }
+
+  // Convex polygons created this way are guaranteed to be simple
+  return vertices;
+}
+
+/**
+ * Generate a random non-convex polygon
+ * @param {number} numVertices Number of vertices
+ * @param {number} minSize Minimum size
+ * @param {number} maxSize Maximum size
+ * @returns {number[][]} Array of vertices
+ */
+function generateRandomNonConvexPolygon(
+  numVertices,
+  minSize = 50,
+  maxSize = 150
+) {
+  // First generate a convex polygon
+  const convexPolygon = generateRandomConvexPolygon(
+    numVertices,
+    minSize,
+    maxSize
+  );
+
+  // Calculate centroid
+  let centroidX = 0,
+    centroidY = 0;
+  for (const vertex of convexPolygon) {
+    centroidX += vertex[0];
+    centroidY += vertex[1];
+  }
+  centroidX /= numVertices;
+  centroidY /= numVertices;
+
+  // Make multiple attempts to create a simple non-convex polygon
+  for (let attempt = 0; attempt < 10; attempt++) {
+    // Make a copy of the convex polygon
+    const nonConvexPolygon = [...convexPolygon];
+
+    // Number of vertices to push inward (at least 1, at most half)
+    // Use fewer vertices for more complex polygons to reduce chance of self-intersection
+    const maxVerticesToModify = Math.max(1, Math.floor(numVertices / 3));
+    const numToModify = 1 + Math.floor(Math.random() * maxVerticesToModify);
+
+    // Randomly select vertices to modify, but avoid selecting adjacent vertices
+    // to reduce the chance of self-intersections
+    const indicesToModify = new Set();
+    const avoidIndices = new Set();
+
+    while (
+      indicesToModify.size < numToModify &&
+      indicesToModify.size + avoidIndices.size < numVertices
+    ) {
+      const index = Math.floor(Math.random() * numVertices);
+
+      // Skip if this index or adjacent indices should be avoided
+      if (avoidIndices.has(index)) continue;
+
+      indicesToModify.add(index);
+
+      // Avoid modifying adjacent vertices
+      avoidIndices.add(index);
+      avoidIndices.add((index + 1) % numVertices);
+      avoidIndices.add((index - 1 + numVertices) % numVertices);
+    }
+
+    // Start with smaller move factors to reduce chance of self-intersection
+    const maxMoveFactor = 0.4;
+
+    // Push selected vertices inward with controlled movement
+    for (const index of indicesToModify) {
+      const vertex = nonConvexPolygon[index];
+      const vectorToCentroid = [centroidX - vertex[0], centroidY - vertex[1]];
+      const magnitude = Math.sqrt(
+        vectorToCentroid[0] ** 2 + vectorToCentroid[1] ** 2
+      );
+      const normalizedVector = [
+        vectorToCentroid[0] / magnitude,
+        vectorToCentroid[1] / magnitude,
+      ];
+
+      // Use a smaller movement factor to reduce self-intersections
+      // Start with small movements
+      const moveFactor = 0.1 + Math.random() * maxMoveFactor;
+
+      // Calculate the new position
+      const newX = vertex[0] + normalizedVector[0] * magnitude * moveFactor;
+      const newY = vertex[1] + normalizedVector[1] * magnitude * moveFactor;
+
+      // Update the vertex
+      nonConvexPolygon[index] = [newX, newY];
+    }
+
+    // Check if the resulting polygon is simple (no self-intersections)
+    if (isSimplePolygon(nonConvexPolygon)) {
+      return nonConvexPolygon;
+    }
+  }
+
+  // If all attempts fail, fall back to the original convex polygon
+  console.log(
+    "Failed to generate simple non-convex polygon, falling back to convex"
+  );
+  return convexPolygon;
+}
+
+/**
+ * Function to generate a set of random test cases
+ * @param {number} count Number of test cases to generate
+ * @param {number} minVertices Minimum number of vertices
+ * @param {number} maxVertices Maximum number of vertices
+ * @returns {Array} Array of test cases
+ */
+function generateRandomTestCases(count = 5, minVertices = 5, maxVertices = 10) {
+  const randomTestCases = [];
+
+  for (let i = 0; i < count; i++) {
+    const numVertices =
+      minVertices + Math.floor(Math.random() * (maxVertices - minVertices + 1));
+    const polygon = generateRandomPolygon(numVertices);
+    randomTestCases.push({
+      name: `Random Polygon ${i + 1}`,
+      polygon: polygon,
+    });
+  }
+
+  return randomTestCases;
+} // ==========================================
 // VECTOR OPERATIONS AND HELPER FUNCTIONS
 // ==========================================
 const vectorSubtract = (v1, v2) => [v1[0] - v2[0], v1[1] - v2[1]];
@@ -916,16 +1166,93 @@ const predefinedTestCases = [
 ];
 
 // ==========================================
-// INITIALIZATION
+// INITIALIZATION AND EVENT HANDLING
 // ==========================================
 
 // Initialize the application when the DOM is loaded
 document.addEventListener("DOMContentLoaded", function () {
   console.log("DOM loaded, initializing application...");
 
+  // Set up event handler for the Generate button
+  const generateButton = document.getElementById("generateButton");
+  if (generateButton) {
+    generateButton.addEventListener("click", handleGenerateButtonClick);
+    console.log("Generate button handler attached");
+  } else {
+    console.error("Generate button not found in the DOM");
+  }
+
   // Visualize predefined test cases
   predefinedTestCases.forEach((test) => visualizePolygon(test));
 });
+
+/**
+ * Handle generate button click
+ */
+function handleGenerateButtonClick() {
+  console.log("Generate button clicked!");
+
+  // Add a loading message immediately for visual feedback
+  const randomTestContainer = document.getElementById("randomTestContainer");
+  randomTestContainer.innerHTML =
+    '<div class="test-container"><h3>Generating random polygons...</h3></div>';
+
+  // Use setTimeout to ensure the UI updates before we start the heavy computation
+  setTimeout(function () {
+    try {
+      // Clear the loading message
+      randomTestContainer.innerHTML = "";
+
+      // Generate and visualize random test cases
+      const randomTests = generateRandomTestCases(5);
+      console.log("Generated random polygons:", randomTests);
+
+      // Make sure random polygons are in clockwise order
+      for (const test of randomTests) {
+        test.polygon = ensureClockwise(test.polygon);
+      }
+
+      // Display random test case stats
+      const statsDiv = document.createElement("div");
+      statsDiv.className = "test-container";
+      statsDiv.innerHTML = "<h3>Random Test Statistics</h3>";
+      randomTestContainer.appendChild(statsDiv);
+
+      let castableCount = 0;
+      randomTests.forEach((test) => {
+        try {
+          const result = isPolygonCastable(test.polygon);
+          if (result.castable) castableCount++;
+
+          // Visualize each random polygon
+          visualizePolygon(test, "randomTestContainer");
+        } catch (error) {
+          console.error(`Error testing ${test.name}:`, error);
+
+          // Still display the polygon even if there was an error analyzing it
+          const errorDiv = document.createElement("div");
+          errorDiv.className = "test-container";
+          errorDiv.innerHTML = `<h3>${test.name}</h3><div class="result-info not-castable">Error analyzing polygon: ${error.message}</div>`;
+          randomTestContainer.appendChild(errorDiv);
+        }
+      });
+
+      // Add statistics
+      const resultInfo = document.createElement("div");
+      resultInfo.className = "result-info";
+      resultInfo.innerHTML = `<strong>Results:</strong> ${castableCount} out of ${
+        randomTests.length
+      } random polygons are castable (${(
+        (castableCount / randomTests.length) *
+        100
+      ).toFixed(0)}%).`;
+      statsDiv.appendChild(resultInfo);
+    } catch (error) {
+      console.error("Error in random polygon generation:", error);
+      randomTestContainer.innerHTML = `<div class="test-container not-castable">Error generating random polygons: ${error.message}</div>`;
+    }
+  }, 10); // Short timeout to allow UI to update
+}
 
 // ==========================================
 // EXPORT FUNCTIONS TO GLOBAL SCOPE
@@ -935,6 +1262,11 @@ document.addEventListener("DOMContentLoaded", function () {
 window.isClockwise = isClockwise;
 window.ensureClockwise = ensureClockwise;
 window.generateRandomTestCases = generateRandomTestCases;
+window.generateRandomPolygon = generateRandomPolygon;
+window.generateRandomConvexPolygon = generateRandomConvexPolygon;
+window.generateRandomNonConvexPolygon = generateRandomNonConvexPolygon;
+window.isSimplePolygon = isSimplePolygon;
+window.doSegmentsIntersect = doSegmentsIntersect;
 window.visualizePolygon = visualizePolygon;
 window.isPolygonCastable = isPolygonCastable;
 window.getTopFacets = getTopFacets;
